@@ -15,8 +15,9 @@
 set -euo pipefail
 
 # Python with a CUDA build of torch. main.ipynb passes its own kernel's python as PY;
-# otherwise fall back to the conda environment below.
-PY=${PY:-/scratch/$USER/hw2_env/bin/python}
+# otherwise use the python on PATH (sbatch exports the submitting shell's PATH), which on
+# NYU HPC is /share/apps/pyenv/py3.9 with torch 2.6.0+cu126.
+PY=${PY:-python}
 
 cd "$SLURM_SUBMIT_DIR"
 nvidia-smi || true
