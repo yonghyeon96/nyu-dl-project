@@ -1,0 +1,5 @@
+# Pin exact versions after the first HPC run (see runs/<run>/env.json).
+torch>=2.1
+numpy>=1.24
+pillow>=9.0
+matplotlib>=3.7   # env_setup.ipynb / plots only

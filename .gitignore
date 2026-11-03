@@ -1,0 +1,18 @@
+# Competition data (never commit)
+data/
+*.zip
+
+# Generated
+cache/
+runs/*
+!runs/.gitkeep
+submission.csv
+*.pt
+*.tmp
+
+# Personal notes
+notes/
+
+# Python / Jupyter
+__pycache__/
+.ipynb_checkpoints/
