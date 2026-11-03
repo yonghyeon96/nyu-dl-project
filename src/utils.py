@@ -27,7 +27,9 @@ def setup_device(use_amp=True):
             # L4 and A100 both support bf16, which needs no GradScaler.
             amp_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     else:
-        torch.set_num_threads(min(4, torch.get_num_threads()))
+        # Use only the CPUs Slurm allocated; more threads than cores makes CPU runs crawl.
+        n_cpus = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count()
+        torch.set_num_threads(max(1, min(4, n_cpus)))
     return device, amp_dtype
 
 
