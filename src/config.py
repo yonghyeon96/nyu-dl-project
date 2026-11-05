@@ -15,6 +15,8 @@ class Config:
     crop_padding: int = 4           # RandomCrop padding; 0 disables
     hflip: bool = True
     cutout: int = 0                 # Cutout square size in pixels; 0 disables
+    color_jitter: float = 0.0       # brightness/contrast/saturation factor range 1 +- this; 0 disables
+    trivial_augment: bool = False   # TrivialAugmentWide: one random op per image
 
     # Model
     widths: tuple = (32, 64, 128, 256)   # channels per stage
@@ -31,6 +33,7 @@ class Config:
     weight_decay: float = 5e-4
     warmup_epochs: int = 0
     label_smoothing: float = 0.0
+    ema_decay: float = 0.0          # evaluate and save an EMA of the weights, e.g. 0.999; 0 disables
 
     # Runtime
     amp: bool = True

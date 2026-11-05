@@ -7,6 +7,8 @@
   "crop_padding": 4,
   "hflip": true,
   "cutout": 0,
+  "color_jitter": 0.0,
+  "trivial_augment": false,
 
   "widths": [32, 64, 128, 256],
   "blocks": [2, 2, 2, 2],
@@ -21,6 +23,7 @@
   "weight_decay": 0.0005,
   "warmup_epochs": 0,
   "label_smoothing": 0.0,
+  "ema_decay": 0.0,
 
   "amp": true,
   "channels_last": true

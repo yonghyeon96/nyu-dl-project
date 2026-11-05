@@ -11,6 +11,7 @@ predict.py          writes and validates submission.csv
 src/
   config.py         experiment settings (JSON + command-line overrides)
   data.py           PNG -> .npy cache, fixed stratified split, GPU loader with augmentation
+  augment.py        batched GPU augmentations (color jitter, TrivialAugmentWide)
   model.py          configurable ResNet + 5M parameter check
   utils.py          seeding, device/AMP setup, environment info
 configs/            experiment configs (baseline.json)

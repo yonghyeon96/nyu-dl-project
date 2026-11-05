@@ -9,6 +9,7 @@ Each run writes runs/<name>_<time>/ with config.json, env.json, log.csv, last.pt
 best.pt (best validation accuracy), final.pt and summary.json.
 """
 import argparse
+import copy
 import csv
 import json
 import math
@@ -64,6 +65,33 @@ def evaluate(model, loader, device, amp_dtype):
     return loss_sum.item() / n, correct.item() / n
 
 
+class ModelEMA:
+    """Exponential moving average of the weights and BatchNorm statistics, updated every step.
+
+    The decay ramps up from 0 so the average is not dominated by the random initial weights.
+    """
+
+    def __init__(self, model, decay):
+        self.decay, self.updates = decay, 0
+        self.model = copy.deepcopy(model).eval().requires_grad_(False)
+        # state_dict() tensors share storage with the modules, so these lists stay live.
+        self._ema = [t for t in self.model.state_dict().values() if t.is_floating_point()]
+        self._src = [t for t in model.state_dict().values() if t.is_floating_point()]
+
+    @torch.no_grad()
+    def update(self):
+        self.updates += 1
+        decay = min(self.decay, (1 + self.updates) / (10 + self.updates))
+        torch._foreach_lerp_(self._ema, self._src, 1 - decay)
+
+    def state_dict(self):
+        return {"model": self.model.state_dict(), "updates": self.updates}
+
+    def load_state_dict(self, state):
+        self.model.load_state_dict(state["model"])
+        self.updates = state["updates"]
+
+
 def save_atomic(obj, path):
     # Write to a temp file first so an instance shutdown never leaves a half-written checkpoint.
     tmp = path.with_suffix(".tmp")
@@ -108,7 +136,8 @@ def main():
 
     train_loader = GpuLoader(data["train_x"][train_idx], data["train_y"][train_idx], cfg.batch_size, device,
                              mean, std, train=True, crop_padding=cfg.crop_padding, hflip=cfg.hflip,
-                             cutout=cfg.cutout, channels_last=cfg.channels_last, seed=cfg.seed)
+                             cutout=cfg.cutout, color_jitter=cfg.color_jitter, trivial_augment=cfg.trivial_augment,
+                             channels_last=cfg.channels_last, seed=cfg.seed)
     val_loader = None
     if len(val_idx):
         val_loader = GpuLoader(data["train_x"][val_idx], data["train_y"][val_idx], 1000, device,
@@ -125,6 +154,8 @@ def main():
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, cosine_with_warmup(cfg.epochs * steps_per_epoch, cfg.warmup_epochs * steps_per_epoch))
     scaler = torch.amp.GradScaler("cuda", enabled=amp_dtype == torch.float16)
+    ema = ModelEMA(model, cfg.ema_decay) if cfg.ema_decay else None
+    eval_model = ema.model if ema else model     # validated, and saved to best.pt / final.pt
 
     start_epoch, best_acc, best_epoch = 0, -1.0, 0
     if ckpt:
@@ -133,6 +164,8 @@ def main():
         scheduler.load_state_dict(ckpt["scheduler"])
         scaler.load_state_dict(ckpt["scaler"])
         train_loader.gen.set_state(ckpt["loader_rng"])
+        if ema:
+            ema.load_state_dict(ckpt["ema"])
         start_epoch, best_acc, best_epoch = ckpt["epoch"], ckpt["best_acc"], ckpt["best_epoch"]
         print(f"Resumed {run_dir.name} at epoch {start_epoch}")
     else:
@@ -151,10 +184,11 @@ def main():
             w = csv.DictWriter(f, LOG_FIELDS); w.writeheader(); w.writerows(rows)
 
     print(f"{cfg.name}: {n_params:,} params | train {len(train_idx)} / val {len(val_idx)} | "
-          f"{cfg.epochs} epochs on {device} (amp={amp_dtype}) -> {run_dir}")
+          f"{cfg.epochs} epochs on {device} (amp={amp_dtype}){' | val on EMA weights' if ema else ''} -> {run_dir}")
 
     # ---- training loop
     t_start = time.perf_counter()
+    val_acc = None      # stays None when resuming a run that already finished
     for epoch in range(start_epoch, cfg.epochs):
         model.train()
         t0 = time.perf_counter()
@@ -168,11 +202,13 @@ def main():
             scaler.step(optimizer)
             scaler.update()
             scheduler.step()
+            if ema:
+                ema.update()
             loss_sum += loss.detach().float() * len(y)
             correct += (logits.argmax(1) == y).sum()
             seen += len(y)
 
-        val_loss, val_acc = evaluate(model, val_loader, device, amp_dtype) if val_loader else (None, None)
+        val_loss, val_acc = evaluate(eval_model, val_loader, device, amp_dtype) if val_loader else (None, None)
         sync(device)
         row = {"epoch": epoch + 1, "lr": optimizer.param_groups[0]["lr"],
                "train_loss": loss_sum.item() / seen, "train_acc": correct.item() / seen,
@@ -181,11 +217,12 @@ def main():
         improved = val_acc is not None and val_acc > best_acc
         if improved:
             best_acc, best_epoch = val_acc, epoch + 1
-            save_atomic({"config": asdict(cfg), "model": model.state_dict(), "epoch": epoch + 1,
+            save_atomic({"config": asdict(cfg), "model": eval_model.state_dict(), "epoch": epoch + 1,
                          "val_acc": val_acc, "mean": mean, "std": std}, run_dir / "best.pt")
         save_atomic({"config": asdict(cfg), "smoke": smoke, "model": model.state_dict(),
                      "optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict(),
                      "scaler": scaler.state_dict(), "loader_rng": train_loader.gen.get_state(),
+                     "ema": ema.state_dict() if ema else None,
                      "epoch": epoch + 1, "best_acc": best_acc, "best_epoch": best_epoch,
                      "mean": mean, "std": std}, run_dir / "last.pt")
 
@@ -199,7 +236,7 @@ def main():
               f"{row['train_acc']:.2%} | {val_txt} | {row['epoch_sec']:.1f}s", flush=True)
 
     # ---- wrap up
-    save_atomic({"config": asdict(cfg), "model": model.state_dict(), "epoch": cfg.epochs,
+    save_atomic({"config": asdict(cfg), "model": eval_model.state_dict(), "epoch": cfg.epochs,
                  "val_acc": val_acc if val_loader else None, "mean": mean, "std": std}, run_dir / "final.pt")
     with open(log_path, newline="") as f:
         rows = list(csv.DictReader(f))

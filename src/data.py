@@ -15,6 +15,8 @@ import torch
 from PIL import Image
 from torch.nn import functional as F
 
+from .augment import color_jitter, trivial_augment
+
 ROOT = Path(__file__).resolve().parent.parent   # repository root
 CACHE_DIR = ROOT / "cache"
 SPLIT_DIR = ROOT / "splits"
@@ -157,7 +159,8 @@ class GpuLoader:
     """
 
     def __init__(self, x, y, batch_size, device, mean, std, train=False,
-                 crop_padding=0, hflip=False, cutout=0, channels_last=False, seed=0):
+                 crop_padding=0, hflip=False, cutout=0, color_jitter=0.0, trivial_augment=False,
+                 channels_last=False, seed=0):
         self.x = torch.from_numpy(x).to(device).permute(0, 3, 1, 2).contiguous()   # N,3,32,32 uint8
         self.y = torch.from_numpy(y).to(device) if y is not None else None
         self.mean = torch.tensor(mean, device=device).view(1, 3, 1, 1)
@@ -165,6 +168,7 @@ class GpuLoader:
         self.batch_size = batch_size
         self.train = train
         self.crop_padding, self.hflip, self.cutout = crop_padding, hflip, cutout
+        self.color_jitter, self.trivial_augment = color_jitter, trivial_augment
         self.channels_last = channels_last
         self.gen = torch.Generator(device=device)
         self.gen.manual_seed(seed)
@@ -179,12 +183,23 @@ class GpuLoader:
                  else torch.arange(n, device=dev))
         for b in range(len(self)):
             idx = order[b * self.batch_size:(b + 1) * self.batch_size]
-            xb = (self.x[idx].float() / 255.0 - self.mean) / self.std
+            xb = self.x[idx].float() / 255.0
+            if self.train:
+                xb = self._augment_pixels(xb)
+            xb = (xb - self.mean) / self.std
             if self.train:
                 xb = self._augment(xb)
             if self.channels_last:
                 xb = xb.contiguous(memory_format=torch.channels_last)
             yield xb, (self.y[idx] if self.y is not None else None)
+
+    def _augment_pixels(self, x):
+        # Photometric augmentation needs real pixel values in [0, 1], so it runs before normalization.
+        if self.trivial_augment:
+            x = trivial_augment(x, self.gen)
+        if self.color_jitter:
+            x = color_jitter(x, self.color_jitter, self.gen)
+        return x
 
     def _augment(self, x):
         B, C, H, W = x.shape
