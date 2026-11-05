@@ -17,7 +17,7 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 | 4 | ep200_1105-222200 | 200 epochs | 2,797,610 | 200 | 94.34% (196) | 100.00% | 20.3* | A100 | | |
 | 5 | cj03_1105-222201 | color jitter 0.3 | 2,797,610 | 100 | 94.06% (89) | 99.94% | 18.7* | A100 | | |
 | 6 | ta_1105-222200 | TrivialAugmentWide | 2,797,610 | 100 | 94.72% (96) | 91.06% | 20.1* | A100 | | |
-| 7 | ta_ep200_1105-222201 | TrivialAugmentWide, 200 epochs | 2,797,610 | 200 | **95.58%** (195) | 92.79% | 24.3* | A100 | | |
+| 7 | ta_ep200_1105-222201 | TrivialAugmentWide, 200 epochs | 2,797,610 | 200 | **95.58%** (195) | 92.79% | 24.3* | A100 | 0.864 | TTA (hflip) |
 | 8 | ema999_1105-222201 | EMA 0.999 | 2,797,610 | 100 | 93.88% (72) | 99.98% | 14.3* | A100 | | |
 
 \* Runs 1–8 shared one A100 at the same time, so their times are not comparable to the baseline's.
@@ -30,6 +30,7 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 - Cutout 16 helps a little (+0.5 pp, borderline) and also lowers train accuracy (97.5%).
 - No gain from changes that leave the model memorizing the training set (train ≈ 100%): 200 epochs alone (+0.3), a wider model alone (+0.05), color jitter (0.0), EMA (−0.2), label smoothing (−0.5). With cosine decay to zero, EMA adds nothing at the end of training.
 - Takeaway: the baseline is limited by overfitting, not capacity. Capacity and training length only pay off once strong augmentation is in place, which sets up round 2.
+- Leaderboard: run 7 scored 0.864 public vs 0.837 for the baseline (+2.7 pp), about twice its val gain (+1.4 pp). Val gains carry over to the shifted evaluation set, amplified, so val stays the selection metric.
 - Color jitter does not help in-distribution val, but it could still help on the shifted evaluation set; only a leaderboard submission would show that.
 - Four identical baseline runs: 94.18 / 93.78 / 93.88 / 94.34% (mean 94.05%, std 0.26 pp; GPU non-determinism). A single run needs about 94.5% or more to count as an improvement.
 - Train accuracy reaches about 100% while val stays at about 94%, so the model overfits. Regularization and augmentation should help.
