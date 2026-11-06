@@ -17,6 +17,8 @@ class Config:
     cutout: int = 0                 # Cutout square size in pixels; 0 disables
     color_jitter: float = 0.0       # brightness/contrast/saturation factor range 1 +- this; 0 disables
     trivial_augment: bool = False   # TrivialAugmentWide: one random op per image
+    cutmix: float = 0.0             # probability that a batch gets CutMix; 0 disables
+    mixup: float = 0.0              # probability that a batch gets Mixup; cutmix + mixup <= 1
 
     # Model
     widths: tuple = (32, 64, 128, 256)   # channels per stage
@@ -34,6 +36,7 @@ class Config:
     warmup_epochs: int = 0
     label_smoothing: float = 0.0
     ema_decay: float = 0.0          # evaluate and save an EMA of the weights, e.g. 0.999; 0 disables
+    sam_rho: float = 0.0            # SAM perturbation radius, e.g. 0.05; 0 disables; doubles the step cost
 
     # Runtime
     amp: bool = True
@@ -71,4 +74,6 @@ def load_config(source=None, overrides=()):
     cfg.blocks = tuple(cfg.blocks)
     if len(cfg.widths) != len(cfg.blocks):
         raise ValueError("widths and blocks must have the same length")
+    if cfg.cutmix + cfg.mixup > 1:
+        raise ValueError("cutmix + mixup are batch probabilities and must not exceed 1")
     return cfg

@@ -2,6 +2,7 @@
 
 Images are float tensors in [0, 1] with shape N,3,H,W. Every image gets its own random
 parameters, and nothing loops over images, so a whole batch costs a few kernel launches.
+The exception is mix_batch, which mixes normalized images with one set of parameters per batch.
 """
 import math
 
@@ -131,3 +132,25 @@ def trivial_augment(x, gen):
     for name, y in color_ops:
         out = torch.where(is_op[name].view(-1, 1, 1, 1), y, out)
     return out
+
+
+def mix_batch(x, y, cutmix, mixup, gen):
+    """Apply CutMix with probability `cutmix`, or Mixup with probability `mixup`, to one batch.
+
+    The mixing weight is uniform, i.e. Beta(1, 1), as in both papers' CIFAR setups. The batch is
+    already shuffled, so each image's partner is simply its mirror position in the batch.
+    Returns the images, the partner labels and the weight of the original labels.
+    """
+    pick, lam, v, u = _rand(4, gen, x.device).tolist()
+    if pick >= cutmix + mixup:
+        return x, y, 1.0
+    partner = x.flip(0)
+    if pick >= cutmix:
+        return lam * x + (1 - lam) * partner, y.flip(0), lam
+    H, W = x.shape[-2:]
+    h, w = round(H * math.sqrt(1 - lam)), round(W * math.sqrt(1 - lam))
+    cy, cx = int(v * H), int(u * W)
+    y0, y1 = max(cy - h // 2, 0), min(cy + h - h // 2, H)
+    x0, x1 = max(cx - w // 2, 0), min(cx + w - w // 2, W)
+    x[..., y0:y1, x0:x1] = partner[..., y0:y1, x0:x1]
+    return x, y.flip(0), 1 - (y1 - y0) * (x1 - x0) / (H * W)     # box clipped at the border: recompute

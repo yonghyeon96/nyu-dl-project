@@ -9,6 +9,8 @@
   "cutout": 0,
   "color_jitter": 0.0,
   "trivial_augment": false,
+  "cutmix": 0.0,
+  "mixup": 0.0,
 
   "widths": [32, 64, 128, 256],
   "blocks": [2, 2, 2, 2],
@@ -24,6 +26,7 @@
   "warmup_epochs": 0,
   "label_smoothing": 0.0,
   "ema_decay": 0.0,
+  "sam_rho": 0.0,
 
   "amp": true,
   "channels_last": true

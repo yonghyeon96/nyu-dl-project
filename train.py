@@ -19,8 +19,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch import nn
 from torch.nn import functional as F
 
+from src.augment import mix_batch
 from src.config import load_config
 from src.data import ROOT, GpuLoader, build_cache, find_data_dir, load_cache, make_split
 from src.model import build_model, count_params
@@ -92,6 +94,36 @@ class ModelEMA:
         self.updates = state["updates"]
 
 
+class SAM:
+    """Sharpness-Aware Minimization (Foret et al., 2021): take the gradient at nearby worst-case weights.
+
+    Call `perturb` after the first backward pass, run a second backward pass, then `restore`
+    before the optimizer step. BatchNorm statistics only update on the first pass.
+    """
+
+    def __init__(self, model, rho):
+        self.model, self.rho = model, rho
+        self.batch_norms = [m for m in model.modules() if isinstance(m, nn.BatchNorm2d)]
+        self.momentum = [m.momentum for m in self.batch_norms]
+
+    @torch.no_grad()
+    def perturb(self):
+        # The first gradients may be loss-scaled, but only their direction is used.
+        self.params = [p for p in self.model.parameters() if p.grad is not None]
+        grads = [p.grad for p in self.params]
+        norm = torch.stack(torch._foreach_norm(grads)).norm()
+        self.eps = torch._foreach_mul(grads, self.rho / (norm + 1e-12))
+        torch._foreach_add_(self.params, self.eps)
+        for m in self.batch_norms:
+            m.momentum = 0.0
+
+    @torch.no_grad()
+    def restore(self):
+        torch._foreach_sub_(self.params, self.eps)
+        for m, momentum in zip(self.batch_norms, self.momentum):
+            m.momentum = momentum
+
+
 def save_atomic(obj, path):
     # Write to a temp file first so an instance shutdown never leaves a half-written checkpoint.
     tmp = path.with_suffix(".tmp")
@@ -156,6 +188,7 @@ def main():
     scaler = torch.amp.GradScaler("cuda", enabled=amp_dtype == torch.float16)
     ema = ModelEMA(model, cfg.ema_decay) if cfg.ema_decay else None
     eval_model = ema.model if ema else model     # validated, and saved to best.pt / final.pt
+    sam = SAM(model, cfg.sam_rho) if cfg.sam_rho else None
 
     start_epoch, best_acc, best_epoch = 0, -1.0, 0
     if ckpt:
@@ -194,18 +227,34 @@ def main():
         t0 = time.perf_counter()
         loss_sum = torch.zeros((), device=device); correct = torch.zeros((), device=device); seen = 0
         for x, y in train_loader:
-            with autocast(device, amp_dtype):
-                logits = model(x)
-                loss = F.cross_entropy(logits, y, label_smoothing=cfg.label_smoothing)
+            y2, lam = y, 1.0
+            if cfg.cutmix or cfg.mixup:
+                x, y2, lam = mix_batch(x, y, cfg.cutmix, cfg.mixup, train_loader.gen)
+
+            def forward():
+                with autocast(device, amp_dtype):
+                    logits = model(x)
+                    loss = F.cross_entropy(logits, y, label_smoothing=cfg.label_smoothing)
+                    if lam < 1:
+                        loss = lam * loss + (1 - lam) * F.cross_entropy(logits, y2, label_smoothing=cfg.label_smoothing)
+                return logits, loss
+
+            logits, loss = forward()
             optimizer.zero_grad(set_to_none=True)
             scaler.scale(loss).backward()
+            if sam:
+                sam.perturb()
+                optimizer.zero_grad(set_to_none=True)
+                scaler.scale(forward()[1]).backward()
+                sam.restore()
             scaler.step(optimizer)
             scaler.update()
             scheduler.step()
             if ema:
                 ema.update()
             loss_sum += loss.detach().float() * len(y)
-            correct += (logits.argmax(1) == y).sum()
+            pred = logits.argmax(1)
+            correct += lam * (pred == y).sum() + (1 - lam) * (pred == y2).sum()
             seen += len(y)
 
         val_loss, val_acc = evaluate(eval_model, val_loader, device, amp_dtype) if val_loader else (None, None)
