@@ -19,11 +19,22 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 | 6 | ta_1105-222200 | TrivialAugmentWide | 2,797,610 | 100 | 94.72% (96) | 91.06% | 20.1* | A100 | | |
 | 7 | ta_ep200_1105-222201 | TrivialAugmentWide, 200 epochs | 2,797,610 | 200 | **95.58%** (195) | 92.79% | 24.3* | A100 | 0.864 | TTA (hflip) |
 | 8 | ema999_1105-222201 | EMA 0.999 | 2,797,610 | 100 | 93.88% (72) | 99.98% | 14.3* | A100 | | |
+| 9 | ta_ep300_1106-052103 | run 7, 300 epochs | 2,797,610 | 300 | 96.04% (285) | 93.19% | 30.7* | A100 | | |
+| 10 | ta_ep200_w42_1106-052103 | run 7, widths 42/84/168/336 | 4,815,940 | 200 | 96.02% (184) | 93.59% | 30.7* | A100 | | |
+| 11 | ta_ep200_cut16_1106-052103 | run 7, cutout 16 | 2,797,610 | 200 | 95.36% (196) | 88.77% | 21.9* | A100 | | |
+| 12 | ta_ep200_s3w64_1106-052103 | run 7, 3 stages, widths 64/128/256, blocks 3/3/3 | 4,327,754 | 200 | **96.52%** (191) | 94.50% | 31.3* | A100 | 0.872 | TTA (hflip) |
 
-\* Runs 1–8 shared one A100 at the same time, so their times are not comparable to the baseline's.
+\* Runs 1–8 shared one A100 at the same time, as did runs 9–12, so their times are not comparable to the baseline's.
 
 ## Observations
 <!-- After each batch of runs: what helped, what didn't, and why you think so. This becomes the report's results section. -->
+
+**Round 2 (runs 9–12, one change each vs. run 7):**
+- The 3-stage model is the clear winner: 96.52%, +0.94 pp. It beats the 4-stage model with more parameters (run 10, 96.02%), so wider high-resolution layers matter more than the extra low-resolution stage.
+- 300 epochs (+0.46 pp) and widths 42/84/168/336 (+0.44 pp) are both at the single-run threshold, so they probably help but are not confirmed.
+- Cutout on top of TrivialAugmentWide does not help (−0.22 pp): train accuracy falls to 88.8%, so regularization is already sufficient.
+- Leaderboard: run 12 scored 0.872 public, +0.8 pp for +0.94 pp val, so the 2× ratio from round 1 did not repeat. From baseline to run 12 the ratio is about 1.5× (+3.5 pp public for +2.34 pp val). Public has only 1,000 images, so these ratios are rough.
+- The val-to-public gap is still about 9 pp. Raising val alone is unlikely to reach 0.90, so round 3 also tests robustness to the shift.
 
 **Round 1 (runs 1–8, one change each vs. baseline):**
 - TrivialAugmentWide is the clear winner: +0.7 pp at 100 epochs and +1.5 pp at 200 epochs (95.58%). Its train accuracy stays at 91–93%, so the model no longer memorizes the training set, and it keeps improving with longer training.
@@ -37,8 +48,14 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 - Public LB (0.837) is about 10 pp below val. The 1,000-image public split has a standard error of about 1.2 pp, so this is not noise. The pipeline checks out (the test images are 32×32 RGB PNGs like the training images, and the submission format is validated), and the test images are slightly brighter and higher in contrast than the training images (per-channel means 0.513/0.498/0.462 vs 0.494/0.483/0.447; std about 0.27 vs 0.25). The evaluation set most likely comes from a shifted distribution. Gains in val accuracy usually carry over to a shifted test set, so val remains the selection metric, with extra weight on augmentation that improves robustness.
 
 ## Next experiments
-Round 2: build on TrivialAugmentWide with 200 epochs (run 7) and change one thing each:
+Round 3: build on run 12:
 - 300 epochs
-- widths 42/84/168/336 (4.82M params, closest to the limit)
-- cutout 16 on top
-- 3 stages, widths 64/128/256, blocks 3/3/3 (4.33M): wider early layers, an architecture variant for the report
+- widths 68/136/272 (4.88M params)
+- CutMix on half of the batches
+- Mixup on half of the batches
+- SAM, rho 0.05
+- color jitter 0.3: judged on the leaderboard as well as val, since it targets the shifted evaluation set
+- widths 68/136/272 and 300 epochs together: a combination of two changes, to raise the score
+
+Before training, compare flip and shift TTA on run 12 with `predict.py --compare-tta`.
+Then retrain the best setting with `full_train=true`.

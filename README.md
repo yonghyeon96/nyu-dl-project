@@ -37,6 +37,7 @@ python train.py --config configs/baseline.json                       # train
 python train.py --config configs/baseline.json --set cutout=16 name=cutout16
 python train.py --resume runs/<run>/last.pt                          # resume
 python predict.py --ckpt runs/<run>/best.pt --tta                    # submission.csv
+python predict.py --ckpt runs/<run>/best.pt --compare-tta            # validation accuracy per TTA setting
 ```
 On NYU HPC, run `sbatch slurm/train.sbatch --config configs/baseline.json`, or use `main.ipynb`.
 
