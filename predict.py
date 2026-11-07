@@ -36,21 +36,36 @@ def tta_views(x, tta, shift):
                 yield view.flip(3)
 
 
+def load_model(ckpt, device):
+    """Rebuild the model stored in a loaded checkpoint; returns (model, config)."""
+    cfg = load_config(ckpt["config"])
+    model = build_model(cfg).to(device)
+    model.load_state_dict(ckpt["model"])
+    if cfg.channels_last:
+        model = model.to(memory_format=torch.channels_last)
+    return model, cfg
+
+
 @torch.no_grad()
-def predict(model, loader, device, amp_dtype, tta=False, shift=0):
-    """Class index per image, in loader order, from softmax probabilities averaged over the TTA views."""
+def predict_probs(model, loader, device, amp_dtype, tta=False, shift=0):
+    """Softmax probabilities per image, in loader order, averaged over the TTA views."""
     model.eval()
-    preds = []
+    out = []
     for x, _ in loader:
         with autocast(device, amp_dtype):
-            probs = sum(model(view).float().softmax(1) for view in tta_views(x, tta, shift))
-        preds.append(probs.argmax(1).cpu())
-    return torch.cat(preds).numpy()
+            views = [model(view).float().softmax(1) for view in tta_views(x, tta, shift)]
+        out.append((sum(views) / len(views)).cpu())
+    return torch.cat(out).numpy()
+
+
+def predict(model, loader, device, amp_dtype, tta=False, shift=0):
+    """Class index per image, in loader order."""
+    return predict_probs(model, loader, device, amp_dtype, tta, shift).argmax(1)
 
 
 def compare_tta(model, data, cfg, ckpt, device, amp_dtype):
     """Print validation accuracy for each TTA setting, on the split this checkpoint did not train on."""
-    val_idx = np.array(make_split(data["train_y"], cfg.val_per_class, cfg.seed)["val_idx"])
+    val_idx = np.array(make_split(data["train_y"], cfg.val_per_class, cfg.split_seed)["val_idx"])
     val_y = data["train_y"][val_idx]
     loader = GpuLoader(data["train_x"][val_idx], val_y, 500, device, ckpt["mean"], ckpt["std"],
                        channels_last=cfg.channels_last)
@@ -91,17 +106,13 @@ def main():
 
     ckpt_path = Path(args.ckpt)
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    cfg = load_config(ckpt["config"])
-    device, amp_dtype = setup_device(cfg.amp)
+    device, amp_dtype = setup_device(load_config(ckpt["config"]).amp)
 
     data_dir = find_data_dir(args.data_dir)
     build_cache(data_dir)
     data = load_cache()
 
-    model = build_model(cfg).to(device)
-    model.load_state_dict(ckpt["model"])
-    if cfg.channels_last:
-        model = model.to(memory_format=torch.channels_last)
+    model, cfg = load_model(ckpt, device)
     if args.compare_tta:
         if cfg.full_train:
             p.error("this checkpoint trained on the validation images, so it cannot be compared on them")

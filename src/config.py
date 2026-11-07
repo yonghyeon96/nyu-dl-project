@@ -7,9 +7,10 @@ from pathlib import Path
 @dataclass
 class Config:
     name: str = "baseline"
-    seed: int = 2026
+    seed: int = 2026                # model init and augmentation; change this to repeat a run
 
     # Data
+    split_seed: int = 2026          # train/val split; keep fixed so every run shares the validation images
     val_per_class: int = 500        # 500 x 10 classes = 5,000 validation images
     full_train: bool = False        # True: train on all 50k images, no validation
     crop_padding: int = 4           # RandomCrop padding; 0 disables
@@ -37,6 +38,9 @@ class Config:
     label_smoothing: float = 0.0
     ema_decay: float = 0.0          # evaluate and save an EMA of the weights, e.g. 0.999; 0 disables
     sam_rho: float = 0.0            # SAM perturbation radius, e.g. 0.05; 0 disables; doubles the step cost
+    teachers: tuple = ()            # checkpoints to distill from, relative to the repository root; () disables
+    kd_alpha: float = 0.9           # weight of the distillation loss against the label loss
+    kd_temperature: float = 4.0     # softens the logits of both teacher and student
 
     # Runtime
     amp: bool = True
@@ -72,6 +76,7 @@ def load_config(source=None, overrides=()):
     cfg = Config(**{**asdict(Config()), **values})
     cfg.widths = tuple(cfg.widths)
     cfg.blocks = tuple(cfg.blocks)
+    cfg.teachers = tuple(cfg.teachers)
     if len(cfg.widths) != len(cfg.blocks):
         raise ValueError("widths and blocks must have the same length")
     if cfg.cutmix + cfg.mixup > 1:

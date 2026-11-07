@@ -8,6 +8,7 @@ A ResNet with **at most 5M trainable parameters**, trained from scratch on the C
 main.ipynb          control panel: checks, training jobs, results, submission
 train.py            training entry point (config-driven, checkpoint/resume)
 predict.py          writes and validates submission.csv
+analyze.py          per-class, pairwise and ensemble results on the validation images
 src/
   config.py         experiment settings (JSON + command-line overrides)
   data.py           PNG -> .npy cache, fixed stratified split, GPU loader with augmentation
@@ -38,6 +39,7 @@ python train.py --config configs/baseline.json --set cutout=16 name=cutout16
 python train.py --resume runs/<run>/last.pt                          # resume
 python predict.py --ckpt runs/<run>/best.pt --tta                    # submission.csv
 python predict.py --ckpt runs/<run>/best.pt --compare-tta            # validation accuracy per TTA setting
+python analyze.py --ckpts runs/<a>/best.pt runs/<b>/best.pt          # per-class and ensemble validation results
 ```
 On NYU HPC, run `sbatch slurm/train.sbatch --config configs/baseline.json`, or use `main.ipynb`.
 

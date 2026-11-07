@@ -124,6 +124,19 @@ class SAM:
             m.momentum = momentum
 
 
+def load_teachers(paths, device, channels_last):
+    """Frozen models to distill from. They only shape the loss and are not part of the saved model."""
+    teachers = []
+    for path in paths:
+        ckpt = torch.load(ROOT / path, map_location="cpu", weights_only=False)
+        teacher = build_model(load_config(ckpt["config"])).to(device)
+        teacher.load_state_dict(ckpt["model"])
+        if channels_last:
+            teacher = teacher.to(memory_format=torch.channels_last)
+        teachers.append(teacher.eval().requires_grad_(False))
+    return teachers
+
+
 def save_atomic(obj, path):
     # Write to a temp file first so an instance shutdown never leaves a half-written checkpoint.
     tmp = path.with_suffix(".tmp")
@@ -156,7 +169,7 @@ def main():
     build_cache(find_data_dir(args.data_dir))
     data = load_cache()
     mean, std = data["meta"]["mean"], data["meta"]["std"]
-    split = make_split(data["train_y"], cfg.val_per_class, cfg.seed)
+    split = make_split(data["train_y"], cfg.val_per_class, cfg.split_seed)
     if cfg.full_train:
         train_idx, val_idx = np.arange(len(data["train_y"])), np.array([], dtype=np.int64)
     else:
@@ -189,6 +202,7 @@ def main():
     ema = ModelEMA(model, cfg.ema_decay) if cfg.ema_decay else None
     eval_model = ema.model if ema else model     # validated, and saved to best.pt / final.pt
     sam = SAM(model, cfg.sam_rho) if cfg.sam_rho else None
+    teachers = load_teachers(cfg.teachers, device, cfg.channels_last)
 
     start_epoch, best_acc, best_epoch = 0, -1.0, 0
     if ckpt:
@@ -206,7 +220,7 @@ def main():
         (run_dir / "env.json").write_text(json.dumps(
             {**env_info(device, amp_dtype), "n_params": n_params, "smoke": smoke,
              "n_train": len(train_idx), "n_val": len(val_idx),
-             "split_file": f"splits/split_seed{cfg.seed}_val{cfg.val_per_class}.json"}, indent=2))
+             "split_file": f"splits/split_seed{cfg.split_seed}_val{cfg.val_per_class}.json"}, indent=2))
 
     log_path = run_dir / "log.csv"
     if ckpt and log_path.is_file():
@@ -230,6 +244,10 @@ def main():
             y2, lam = y, 1.0
             if cfg.cutmix or cfg.mixup:
                 x, y2, lam = mix_batch(x, y, cfg.cutmix, cfg.mixup, train_loader.gen)
+            target = None
+            if teachers:
+                with torch.no_grad(), autocast(device, amp_dtype):
+                    target = torch.stack([(t(x).float() / cfg.kd_temperature).softmax(1) for t in teachers]).mean(0)
 
             def forward():
                 with autocast(device, amp_dtype):
@@ -237,6 +255,10 @@ def main():
                     loss = F.cross_entropy(logits, y, label_smoothing=cfg.label_smoothing)
                     if lam < 1:
                         loss = lam * loss + (1 - lam) * F.cross_entropy(logits, y2, label_smoothing=cfg.label_smoothing)
+                    if target is not None:
+                        soft = F.log_softmax(logits.float() / cfg.kd_temperature, 1)
+                        kd = F.kl_div(soft, target, reduction="batchmean") * cfg.kd_temperature ** 2
+                        loss = (1 - cfg.kd_alpha) * loss + cfg.kd_alpha * kd
                 return logits, loss
 
             logits, loss = forward()

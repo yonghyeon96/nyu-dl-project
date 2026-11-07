@@ -6,7 +6,7 @@
 # Watch progress:  squeue -u $USER ;  tail -f runs/slurm-<jobid>.out
 #SBATCH --job-name=cifar-resnet
 #SBATCH --account=cs_gy_6923-2026fa
-#SBATCH --partition=g2-standard-12
+#SBATCH --partition=c12m85-a100-1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=02:00:00
