@@ -1,0 +1,39 @@
+{
+  "name": "ta_ep200_w42",
+  "seed": 2026,
+  "val_per_class": 500,
+  "full_train": false,
+  "crop_padding": 4,
+  "hflip": true,
+  "cutout": 0,
+  "color_jitter": 0.0,
+  "trivial_augment": true,
+  "cutmix": 0.0,
+  "mixup": 0.0,
+  "widths": [
+    42,
+    84,
+    168,
+    336
+  ],
+  "blocks": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "kernel_size": 3,
+  "dropout": 0.0,
+  "epochs": 200,
+  "batch_size": 256,
+  "lr": 0.1,
+  "momentum": 0.9,
+  "nesterov": true,
+  "weight_decay": 0.0005,
+  "warmup_epochs": 0,
+  "label_smoothing": 0.0,
+  "ema_decay": 0.0,
+  "sam_rho": 0.0,
+  "amp": true,
+  "channels_last": true
+}

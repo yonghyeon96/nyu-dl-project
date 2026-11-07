@@ -1,0 +1,11 @@
+{
+  "name": "ema999",
+  "run_dir": "ema999_1105-222201",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9388,
+  "best_epoch": 72,
+  "final_val_acc": 0.9378,
+  "final_train_acc": 0.99984375,
+  "train_minutes": 14.349170979300068
+}

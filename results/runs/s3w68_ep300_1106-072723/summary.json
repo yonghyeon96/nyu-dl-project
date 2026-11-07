@@ -1,0 +1,11 @@
+{
+  "name": "s3w68_ep300",
+  "run_dir": "s3w68_ep300_1106-072723",
+  "n_params": 4884926,
+  "epochs": 300,
+  "best_val_acc": 0.968,
+  "best_epoch": 289,
+  "final_val_acc": 0.968,
+  "final_train_acc": 0.9503571428571429,
+  "train_minutes": 122.6928448711333
+}

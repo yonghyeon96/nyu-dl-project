@@ -1,0 +1,11 @@
+{
+  "name": "s3w64_mixup",
+  "run_dir": "s3w64_mixup_1106-072723",
+  "n_params": 4327754,
+  "epochs": 200,
+  "best_val_acc": 0.9638,
+  "best_epoch": 187,
+  "final_val_acc": 0.9634,
+  "final_train_acc": 0.8296119907924108,
+  "train_minutes": 74.51754636826675
+}

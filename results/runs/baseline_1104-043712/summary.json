@@ -1,0 +1,11 @@
+{
+  "name": "baseline",
+  "run_dir": "baseline_1104-043712",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9378,
+  "best_epoch": 89,
+  "final_val_acc": 0.9364,
+  "final_train_acc": 0.9996651785714286,
+  "train_minutes": 3.2852211148166686
+}

@@ -1,0 +1,11 @@
+{
+  "name": "ta",
+  "run_dir": "ta_1105-222200",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9472,
+  "best_epoch": 96,
+  "final_val_acc": 0.9464,
+  "final_train_acc": 0.910625,
+  "train_minutes": 20.14427483033337
+}

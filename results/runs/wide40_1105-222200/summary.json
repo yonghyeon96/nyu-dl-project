@@ -1,0 +1,11 @@
+{
+  "name": "wide40",
+  "run_dir": "wide40_1105-222200",
+  "n_params": 4368690,
+  "epochs": 100,
+  "best_val_acc": 0.941,
+  "best_epoch": 85,
+  "final_val_acc": 0.939,
+  "final_train_acc": 0.9998214285714285,
+  "train_minutes": 17.23370203561664
+}

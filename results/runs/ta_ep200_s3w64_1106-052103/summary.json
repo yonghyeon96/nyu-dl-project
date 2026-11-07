@@ -1,0 +1,11 @@
+{
+  "name": "ta_ep200_s3w64",
+  "run_dir": "ta_ep200_s3w64_1106-052103",
+  "n_params": 4327754,
+  "epochs": 200,
+  "best_val_acc": 0.9652,
+  "best_epoch": 191,
+  "final_val_acc": 0.9628,
+  "final_train_acc": 0.9449553571428572,
+  "train_minutes": 31.30171511948328
+}

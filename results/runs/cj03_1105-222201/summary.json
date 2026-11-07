@@ -1,0 +1,11 @@
+{
+  "name": "cj03",
+  "run_dir": "cj03_1105-222201",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9406,
+  "best_epoch": 89,
+  "final_val_acc": 0.9384,
+  "final_train_acc": 0.999375,
+  "train_minutes": 18.693739799166647
+}

@@ -1,0 +1,4 @@
+run,None,Flip,Flip + shift 1,Flip + shift 2,Flip + shift 3,Flip + shift 4
+s3w64_ep300_cutmix,97.1,97.3,97.48,97.4,97.32,97.36
+s3w64_ep300_cutmix_s2027,96.86,97.14,97.06,97.08,97.04,96.96
+s3w64_ep300_kd,97.48,97.32,97.36,97.34,97.36,97.24

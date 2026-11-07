@@ -1,0 +1,11 @@
+{
+  "name": "s3w64_ep300_cutmix_s2027",
+  "run_dir": "s3w64_ep300_cutmix_s2027_1107-010621",
+  "n_params": 4327754,
+  "epochs": 300,
+  "best_val_acc": 0.9686,
+  "best_epoch": 282,
+  "final_val_acc": 0.9678,
+  "final_train_acc": 0.8089267403738839,
+  "train_minutes": 41.442509901666675
+}

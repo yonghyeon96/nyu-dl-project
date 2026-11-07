@@ -1,5 +1,5 @@
-# Pin exact versions after the first HPC run (see runs/<run>/env.json).
-torch>=2.1
-numpy>=1.24
-pillow>=9.0
-matplotlib>=3.7   # env_setup.ipynb / plots only
+# Versions recorded in runs/<run>/env.json on NYU HPC (Python 3.9, CUDA 12.6 build of torch).
+torch==2.6.0
+numpy==2.0.2
+pillow==11.3.0
+matplotlib>=3.7   # plots in main.ipynb only

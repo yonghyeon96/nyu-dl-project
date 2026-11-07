@@ -2,6 +2,7 @@
 # Submit from the repository root (main.ipynb does this for you):
 #   sbatch slurm/train.sbatch --config configs/baseline.json
 #   sbatch slurm/train.sbatch --config configs/baseline.json --set cutout=16 name=cutout16
+#   sbatch slurm/train.sbatch --config configs/final.json
 #   sbatch slurm/train.sbatch --resume runs/<run>/last.pt
 # Watch progress:  squeue -u $USER ;  tail -f runs/slurm-<jobid>.out
 #SBATCH --job-name=cifar-resnet

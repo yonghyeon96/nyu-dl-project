@@ -1,0 +1,9 @@
+submission,run,checkpoint,tta,public
+1,baseline_1104-030203,best,flip,0.837
+2,ta_ep200_1105-222201,best,flip,0.864
+3,ta_ep200_s3w64_1106-052103,best,flip,0.872
+4,s3w64_ep300_1106-072723,best,flip,0.873
+5,s3w64_cutmix_1106-072723,best,flip,0.873
+6,s3w64_ep300_cutmix_full_1107-000424,final,flip + shift 1,0.898
+7,s3w64_ep300_cutmix_full_s2027_1107-011808,final,flip + shift 1,0.896
+8,s3w64_ep300_kd_full_1107-020711,final,none,0.875

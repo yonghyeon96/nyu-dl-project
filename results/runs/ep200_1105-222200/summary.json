@@ -1,0 +1,11 @@
+{
+  "name": "ep200",
+  "run_dir": "ep200_1105-222200",
+  "n_params": 2797610,
+  "epochs": 200,
+  "best_val_acc": 0.9434,
+  "best_epoch": 196,
+  "final_val_acc": 0.9426,
+  "final_train_acc": 0.9999553571428571,
+  "train_minutes": 20.32958308441664
+}

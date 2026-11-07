@@ -1,0 +1,11 @@
+{
+  "name": "s3w64_ep300_kd_full",
+  "run_dir": "s3w64_ep300_kd_full_1107-020711",
+  "n_params": 4327754,
+  "epochs": 300,
+  "best_val_acc": null,
+  "best_epoch": null,
+  "final_val_acc": null,
+  "final_train_acc": 0.9448116987179487,
+  "train_minutes": 23.514456943166692
+}

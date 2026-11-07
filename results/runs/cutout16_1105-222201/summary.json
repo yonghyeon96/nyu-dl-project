@@ -1,0 +1,11 @@
+{
+  "name": "cutout16",
+  "run_dir": "cutout16_1105-222201",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9452,
+  "best_epoch": 99,
+  "final_val_acc": 0.9442,
+  "final_train_acc": 0.9744642857142857,
+  "train_minutes": 14.35464924906671
+}

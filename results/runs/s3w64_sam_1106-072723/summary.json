@@ -1,0 +1,11 @@
+{
+  "name": "s3w64_sam",
+  "run_dir": "s3w64_sam_1106-072723",
+  "n_params": 4327754,
+  "epochs": 200,
+  "best_val_acc": 0.9684,
+  "best_epoch": 182,
+  "final_val_acc": 0.9664,
+  "final_train_acc": 0.9449776785714286,
+  "train_minutes": 101.58256600238332
+}

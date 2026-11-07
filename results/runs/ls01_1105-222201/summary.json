@@ -1,0 +1,11 @@
+{
+  "name": "ls01",
+  "run_dir": "ls01_1105-222201",
+  "n_params": 2797610,
+  "epochs": 100,
+  "best_val_acc": 0.9352,
+  "best_epoch": 89,
+  "final_val_acc": 0.9338,
+  "final_train_acc": 0.9998214285714285,
+  "train_minutes": 14.382325435716659
+}

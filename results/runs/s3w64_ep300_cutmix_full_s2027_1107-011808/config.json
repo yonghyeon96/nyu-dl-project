@@ -1,0 +1,41 @@
+{
+  "name": "s3w64_ep300_cutmix_full_s2027",
+  "seed": 2027,
+  "split_seed": 2026,
+  "val_per_class": 500,
+  "full_train": true,
+  "crop_padding": 4,
+  "hflip": true,
+  "cutout": 0,
+  "color_jitter": 0.0,
+  "trivial_augment": true,
+  "cutmix": 0.5,
+  "mixup": 0.0,
+  "widths": [
+    64,
+    128,
+    256
+  ],
+  "blocks": [
+    3,
+    3,
+    3
+  ],
+  "kernel_size": 3,
+  "dropout": 0.0,
+  "epochs": 300,
+  "batch_size": 256,
+  "lr": 0.1,
+  "momentum": 0.9,
+  "nesterov": true,
+  "weight_decay": 0.0005,
+  "warmup_epochs": 0,
+  "label_smoothing": 0.0,
+  "ema_decay": 0.0,
+  "sam_rho": 0.0,
+  "teachers": [],
+  "kd_alpha": 0.9,
+  "kd_temperature": 4.0,
+  "amp": true,
+  "channels_last": true
+}

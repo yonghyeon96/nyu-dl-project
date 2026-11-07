@@ -24,38 +24,72 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 | 11 | ta_ep200_cut16_1106-052103 | run 7, cutout 16 | 2,797,610 | 200 | 95.36% (196) | 88.77% | 21.9* | A100 | | |
 | 12 | ta_ep200_s3w64_1106-052103 | run 7, 3 stages, widths 64/128/256, blocks 3/3/3 | 4,327,754 | 200 | **96.52%** (191) | 94.50% | 31.3* | A100 | 0.872 | TTA (hflip) |
 
-\* Runs 1–8 shared one A100 at the same time, as did runs 9–12, so their times are not comparable to the baseline's.
+| 13 | s3w64_ep300_1106-072723 | run 12, 300 epochs | 4,327,754 | 300 | 97.00% (298) | 94.96% | 98.0* | A100 | 0.873 | TTA (hflip) |
+| 14 | s3w68_1106-072723 | run 12, widths 68/136/272 | 4,884,926 | 200 | 96.64% (184) | 94.65% | 98.5* | A100 | | |
+| 15 | s3w64_cutmix_1106-072723 | run 12, CutMix on 50% of batches | 4,327,754 | 200 | 97.00% (200) | 81.46% | 74.5* | A100 | 0.873 | TTA (hflip) |
+| 16 | s3w64_mixup_1106-072723 | run 12, Mixup on 50% of batches | 4,327,754 | 200 | 96.38% (187) | 82.96% | 74.5* | A100 | | |
+| 17 | s3w64_sam_1106-072723 | run 12, SAM rho 0.05 | 4,327,754 | 200 | 96.84% (182) | 94.50% | 101.6* | A100 | | Resumed at epoch 193 |
+| 18 | s3w64_cj03_1106-072723 | run 12, color jitter 0.3 | 4,327,754 | 200 | 96.66% (184) | 94.30% | 81.1* | A100 | | |
+| 19 | s3w68_ep300_1106-072723 | run 12, widths 68/136/272, 300 epochs | 4,884,926 | 300 | 96.80% (289) | 95.04% | 122.7* | A100 | | Resumed at epoch 203; two changes |
+| 20 | s3w64_ep300_cutmix_1107-000424 | run 12, 300 epochs and CutMix | 4,327,754 | 300 | **97.10%** (291) | 81.34% | 38.8* | A100 | | Two changes |
+| 21 | s3w64_ep300_cutmix_full_1107-000424 | run 20 on all 50,000 images | 4,327,754 | 300 | no val | 80.36% | 40.2* | A100 | 0.898 | final.pt; TTA (hflip + shift 1) |
+| 22 | s3w64_ep300_cutmix_s2027_1107-010621 | run 20, seed 2027 | 4,327,754 | 300 | 96.86% (282) | 80.89% | 41.4* | A100 | | |
+| 23 | s3w64_ep300_kd_1107-010621 | run 13, distillation from runs 13 and 15 | 4,327,754 | 300 | **97.48%** (269) | 94.61% | 51.3* | A100 | | Alpha 0.9, temperature 4 |
+| 24 | s3w64_ep300_cutmix_full_s2027_1107-011808 | run 21, seed 2027 | 4,327,754 | 300 | no val | 81.79% | 42.0* | A100 | 0.896 | final.pt; TTA (hflip + shift 1) |
+| 25 | s3w64_ep300_kd_full_1107-020711 | run 23 on all 50,000 images | 4,327,754 | 300 | no val | 94.48% | 23.5 | A100 | 0.875 | final.pt; no TTA |
+
+\* Runs in the same round shared one A100 at the same time, so their times are not comparable to the baseline's.
 
 ## Observations
 <!-- After each batch of runs: what helped, what didn't, and why you think so. This becomes the report's results section. -->
 
+**Inference on run 20 (no retraining, 5,000 validation images):**
+- Validation accuracy per TTA setting:
+
+| Run | None | Flip | Shift 1 | Shift 2 | Shift 3 | Shift 4 |
+|---|---|---|---|---|---|---|
+| 20 | 97.10% | 97.30% | 97.48% | 97.40% | 97.32% | 97.36% |
+| 22 | 96.86% | 97.14% | 97.06% | 97.08% | 97.04% | 96.96% |
+| 23 | 97.48% | 97.32% | 97.36% | 97.34% | 97.36% | 97.24% |
+
+- Flip helps the two CutMix runs by 0.20 to 0.28 pp. Shifts add no consistent gain beyond flip: +0.18, −0.08 and +0.04 pp. The distilled model scores best with no TTA.
+- With flip TTA, runs 13, 15 and 20 score 97.02%, 97.36% and 97.30%. Their averaged predictions score 97.56%, or 10 more correct images than the best single model, so distillation has limited room.
+- Cat and dog confusions are the largest group: 36 of the 135 errors of run 20 with flip TTA.
+
+**Round 4 (runs 20–25):**
+- Run 25 scored 0.875 public, about 2.2 pp below runs 21 and 24, even though its setting has the best validation accuracy. It has neither CutMix nor flip + shift 1 TTA, so the cause is open. Best validation accuracy did not pick the best public model.
+- All public scores above 0.875 came from CutMix models trained on all images with flip + shift 1 TTA.
+- Distillation gives the best validated model. Mean val of the last 10 epochs: run 23 97.42%, run 20 96.98%, run 22 96.79%, run 13 96.93%. That is +0.49 pp over run 13, its reference, from one run. Its validation loss is also the lowest (0.084).
+- Repeating run 20 with another seed moved the last-10 mean by −0.19 pp, so the two seeds average 96.88%, close to runs 13 and 15.
+- Run 21 scored 0.898 public, +2.5 pp over the previous best. It changed the training data and the TTA together, so this submission cannot separate their effects.
+- Run 24 repeats run 21 with another seed and scored 0.896 public, so training on all 50,000 images gave about 0.897 across two seeds. Their predictions differ on 113 of 2,000 images.
+
+**Round 3 (runs 13–19, changes vs. run 12):**
+- Comparing the mean val of the last 10 epochs, which is less optimistic than best val: run 20 96.98%, run 13 96.93%, run 15 96.89%, run 19 96.74%, run 17 96.64%, run 18 96.58%, run 14 96.49%, run 12 96.44%, run 16 96.31%.
+- 300 epochs (+0.49 pp) and CutMix (+0.45 pp) are the useful changes. Combining them adds little (+0.54 pp), and the top three runs are within 0.09 pp, so this recipe levels off near 97%.
+- Wider models, SAM, color jitter and Mixup show no clear gain. SAM costs twice as much per step.
+- Runs 13 and 15 scored 0.873 public, +0.1 pp over run 12, which is one image and within noise.
+
 **Round 2 (runs 9–12, one change each vs. run 7):**
-- The 3-stage model is the clear winner: 96.52%, +0.94 pp. It beats the 4-stage model with more parameters (run 10, 96.02%), so wider high-resolution layers matter more than the extra low-resolution stage.
-- 300 epochs (+0.46 pp) and widths 42/84/168/336 (+0.44 pp) are both at the single-run threshold, so they probably help but are not confirmed.
+- The 3-stage model is the clear winner: 96.52%, +0.94 pp. It beats the 4-stage model with more parameters (run 10, 96.02%). It changed the stages, widths and blocks together, so the gain cannot be traced to one of them.
+- 300 epochs (+0.46 pp) and widths 42/84/168/336 (+0.44 pp) are about the size of the difference between two repeated runs (0.40 pp), so these gains are not confirmed.
 - Cutout on top of TrivialAugmentWide does not help (−0.22 pp): train accuracy falls to 88.8%, so regularization is already sufficient.
-- Leaderboard: run 12 scored 0.872 public, +0.8 pp for +0.94 pp val, so the 2× ratio from round 1 did not repeat. From baseline to run 12 the ratio is about 1.5× (+3.5 pp public for +2.34 pp val). Public has only 1,000 images, so these ratios are rough.
-- The val-to-public gap is still about 9 pp. Raising val alone is unlikely to reach 0.90, so round 3 also tests robustness to the shift.
+- Leaderboard: run 12 scored 0.872 public, +0.8 pp over run 7.
 
 **Round 1 (runs 1–8, one change each vs. baseline):**
 - TrivialAugmentWide is the clear winner: +0.7 pp at 100 epochs and +1.5 pp at 200 epochs (95.58%). Its train accuracy stays at 91–93%, so the model no longer memorizes the training set, and it keeps improving with longer training.
 - Cutout 16 helps a little (+0.5 pp, borderline) and also lowers train accuracy (97.5%).
-- No gain from changes that leave the model memorizing the training set (train ≈ 100%): 200 epochs alone (+0.3), a wider model alone (+0.05), color jitter (0.0), EMA (−0.2), label smoothing (−0.5). With cosine decay to zero, EMA adds nothing at the end of training.
+- No gain from changes that leave the model memorizing the training set (train ≈ 100%): 200 epochs alone (+0.3), a wider model alone (+0.05), color jitter (0.0), EMA (−0.2), label smoothing (−0.5). In this one baseline run, EMA gave no gain at the end of a cosine schedule.
 - Takeaway: the baseline is limited by overfitting, not capacity. Capacity and training length only pay off once strong augmentation is in place, which sets up round 2.
-- Leaderboard: run 7 scored 0.864 public vs 0.837 for the baseline (+2.7 pp), about twice its val gain (+1.4 pp). Val gains carry over to the shifted evaluation set, amplified, so val stays the selection metric.
-- Color jitter does not help in-distribution val, but it could still help on the shifted evaluation set; only a leaderboard submission would show that.
+- Leaderboard: run 7 scored 0.864 public vs 0.837 for the baseline. Validation accuracy stays the selection metric.
 - Four identical baseline runs: 94.18 / 93.78 / 93.88 / 94.34% (mean 94.05%, std 0.26 pp; GPU non-determinism). A single run needs about 94.5% or more to count as an improvement.
 - Train accuracy reaches about 100% while val stays at about 94%, so the model overfits. Regularization and augmentation should help.
-- Public LB (0.837) is about 10 pp below val. The 1,000-image public split has a standard error of about 1.2 pp, so this is not noise. The pipeline checks out (the test images are 32×32 RGB PNGs like the training images, and the submission format is validated), and the test images are slightly brighter and higher in contrast than the training images (per-channel means 0.513/0.498/0.462 vs 0.494/0.483/0.447; std about 0.27 vs 0.25). The evaluation set most likely comes from a shifted distribution. Gains in val accuracy usually carry over to a shifted test set, so val remains the selection metric, with extra weight on augmentation that improves robustness.
+- Public LB (0.837) is about 10 pp below val. The submission format is validated. The cause of the gap is not known, so validation accuracy remains the selection metric.
 
-## Next experiments
-Round 3: build on run 12:
-- 300 epochs
-- widths 68/136/272 (4.88M params)
-- CutMix on half of the batches
-- Mixup on half of the batches
-- SAM, rho 0.05
-- color jitter 0.3: judged on the leaderboard as well as val, since it targets the shifted evaluation set
-- widths 68/136/272 and 300 epochs together: a combination of two changes, to raise the score
+## Final model
 
-Before training, compare flip and shift TTA on run 12 with `predict.py --compare-tta`.
-Then retrain the best setting with `full_train=true`.
+Run 21 is the final model: the setting in `configs/final.json`, `final.pt`, flip + shift 1 TTA, 4,327,754 parameters, public 0.898. Run 24 repeats it with another seed (0.896).
+
+The final choice uses the official public scores as well as validation accuracy, because the model with the best validation accuracy (run 23) did not score best in its full-data version (run 25, 0.875).
+
+Open question: runs 21 and 24 changed the training data and the TTA together, and run 25 used neither CutMix nor TTA, so the source of the public gain is not separated.

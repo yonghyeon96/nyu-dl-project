@@ -1,0 +1,11 @@
+{
+  "name": "ta_ep200",
+  "run_dir": "ta_ep200_1105-222201",
+  "n_params": 2797610,
+  "epochs": 200,
+  "best_val_acc": 0.9558,
+  "best_epoch": 195,
+  "final_val_acc": 0.9548,
+  "final_train_acc": 0.9278794642857143,
+  "train_minutes": 24.337064344066643
+}
