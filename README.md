@@ -2,6 +2,8 @@
 
 A ResNet with **at most 5M trainable parameters**, trained from scratch on the CIFAR-10 training images provided for the course Kaggle competition.
 
+**Report:** [report.pdf](report.pdf)
+
 ## Repository layout
 
 ```
@@ -20,6 +22,7 @@ slurm/train.sbatch  Slurm GPU job for NYU HPC
 splits/             fixed train/validation split (45,000 / 5,000, stratified)
 experiments.md      experiment log
 results/            per-run configs, logs and summaries, plus result tables
+report.pdf          project report
 ```
 
 Not in the repository: competition data (`data/`), the generated cache (`cache/`), checkpoints and prediction files.
@@ -79,10 +82,11 @@ This trains on all 50,000 images for 300 epochs with seed 2027 and averages pred
 | **7** | **Same, seed 2027 (selected, final)** | **50,000** | **Flip + shift 1** | **None held out** | **0.896** | **0.879** |
 | 8 | Distillation, 300 epochs, no CutMix | 50,000 | None | None held out | 0.875 | 0.852 |
 
-Models 3 to 8 have 4,327,754 parameters. Validation accuracies are without TTA. Full history: [experiments.md](experiments.md). Per-run records: [results/](results/).
+Models 3 to 8 have 4,327,754 parameters. Validation accuracies are without TTA. Full history: [experiments.md](experiments.md). Per-run records: [results/](results/). Analysis and discussion: [report.pdf](report.pdf).
 
 ## References
 
+- Krizhevsky, "Learning Multiple Layers of Features from Tiny Images", 2009.
 - He et al., "Deep Residual Learning for Image Recognition", CVPR 2016.
 - DeVries and Taylor, "Improved Regularization of Convolutional Neural Networks with Cutout", 2017.
 - Muller and Hutter, "TrivialAugment: Tuning-free Yet State-of-the-Art Data Augmentation", ICCV 2021. Operations and strength ranges follow torchvision's `TrivialAugmentWide`.
@@ -90,3 +94,4 @@ Models 3 to 8 have 4,327,754 parameters. Validation accuracies are without TTA. 
 - Yun et al., "CutMix: Regularization Strategy to Train Strong Classifiers with Localizable Features", ICCV 2019.
 - Foret et al., "Sharpness-Aware Minimization for Efficiently Improving Generalization", ICLR 2021.
 - Hinton et al., "Distilling the Knowledge in a Neural Network", 2015.
+- Loshchilov and Hutter, "SGDR: Stochastic Gradient Descent with Warm Restarts", ICLR 2017. Cosine schedule, without restarts.
