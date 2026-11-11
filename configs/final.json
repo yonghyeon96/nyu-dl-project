@@ -1,6 +1,6 @@
 {
   "name": "final",
-  "seed": 2026,
+  "seed": 2027,
   "split_seed": 2026,
   "val_per_class": 500,
   "full_train": true,

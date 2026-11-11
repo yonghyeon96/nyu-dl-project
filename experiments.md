@@ -35,7 +35,7 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 | 21 | s3w64_ep300_cutmix_full_1107-000424 | run 20 on all 50,000 images | 4,327,754 | 300 | no val | 80.36% | 40.2* | A100 | 0.898 | final.pt; TTA (hflip + shift 1) |
 | 22 | s3w64_ep300_cutmix_s2027_1107-010621 | run 20, seed 2027 | 4,327,754 | 300 | 96.86% (282) | 80.89% | 41.4* | A100 | | |
 | 23 | s3w64_ep300_kd_1107-010621 | run 13, distillation from runs 13 and 15 | 4,327,754 | 300 | **97.48%** (269) | 94.61% | 51.3* | A100 | | Alpha 0.9, temperature 4 |
-| 24 | s3w64_ep300_cutmix_full_s2027_1107-011808 | run 21, seed 2027 | 4,327,754 | 300 | no val | 81.79% | 42.0* | A100 | 0.896 | final.pt; TTA (hflip + shift 1) |
+| 24 | s3w64_ep300_cutmix_full_s2027_1107-011808 | run 21, seed 2027 | 4,327,754 | 300 | no val | 81.79% | 42.0* | A100 | 0.896 | final.pt; TTA (hflip + shift 1); private 0.879, final |
 | 25 | s3w64_ep300_kd_full_1107-020711 | run 23 on all 50,000 images | 4,327,754 | 300 | no val | 94.48% | 23.5 | A100 | 0.875 | final.pt; no TTA |
 
 \* Runs in the same round shared one A100 at the same time, so their times are not comparable to the baseline's.
@@ -88,8 +88,22 @@ Validation: stratified 45,000 / 5,000 split, `splits/split_seed2026_val500.json`
 
 ## Final model
 
-Run 21 is the final model: the setting in `configs/final.json`, `final.pt`, flip + shift 1 TTA, 4,327,754 parameters, public 0.898. Run 24 repeats it with another seed (0.896).
+Run 24 produced the final private score: the setting in `configs/final.json` (seed 2027), `final.pt`, flip + shift 1 TTA, 4,327,754 parameters. Private 0.879, rank 17 of 81. Run 21, the same setting with seed 2026, was the other selected submission.
 
-The final choice uses the official public scores as well as validation accuracy, because the model with the best validation accuracy (run 23) did not score best in its full-data version (run 25, 0.875).
+| Run | Public | Private | Mean of both (2,000 images) |
+|---|---|---|---|
+| 0a, baseline | 0.837 | 0.805 | 0.821 |
+| 7, TrivialAugmentWide 200 epochs | 0.864 | 0.836 | 0.850 |
+| 12, 3 stages | 0.872 | 0.845 | 0.859 |
+| 13, 3 stages, 300 epochs | 0.873 | 0.841 | 0.857 |
+| 15, 3 stages, CutMix | 0.873 | 0.871 | 0.872 |
+| 21, CutMix, 300 epochs, all images, seed 2026 | 0.898 | 0.871 | 0.885 |
+| 24, CutMix, 300 epochs, all images, seed 2027 | 0.896 | 0.879 | 0.888 |
+| 25, distillation, all images | 0.875 | 0.852 | 0.864 |
 
-Open question: runs 21 and 24 changed the training data and the TTA together, and run 25 used neither CutMix nor TTA, so the source of the public gain is not separated.
+The public and private parts have 1,000 images each, so the mean is the accuracy on all 2,000 evaluation images (standard error about 0.7 pp).
+
+- CutMix models score highest on the evaluation images. Runs 13 and 15 have the same validation and public scores, but on all 2,000 images run 15 is 1.5 pp higher.
+- Runs 21 and 24 average 1.4 pp above run 15. They also differ in training images, epochs and TTA, so the gain cannot be assigned to one change.
+- The distilled model had the best validation accuracy, but its full-data version is 2.2 pp below runs 21 and 24 on all 2,000 images. It used neither CutMix nor TTA.
+- Validation accuracy above about 97% did not predict accuracy on the evaluation images.

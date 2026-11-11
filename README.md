@@ -52,14 +52,7 @@ python train.py --config configs/final.json          # writes runs/final_<time>/
 python predict.py --ckpt runs/final_<time>/final.pt --tta --shift 1
 ```
 
-This trains on all 50,000 images for 300 epochs and averages predictions over 18 flipped and shifted views. GPU training is not fully deterministic, so a new run gives close but not identical predictions. With seed 2026 and seed 2027, this setting scored 0.898 and 0.896 on the public leaderboard.
-
-Each run folder `runs/<name>_<time>/` holds the following files:
-- `config.json`: the full configuration
-- `env.json`: hardware, package versions and parameter count
-- `log.csv`: per-epoch metrics
-- `best.pt`, `last.pt` and `final.pt`: checkpoints
-- `summary.json`: the run summary
+This trains on all 50,000 images for 300 epochs with seed 2027 and averages predictions over 18 flipped and shifted views. It is the setting of the submission that scored 0.879 on the private leaderboard. GPU training is not fully deterministic, so a new run gives close but not identical predictions.
 
 ## Rules compliance
 
@@ -71,20 +64,22 @@ Each run folder `runs/<name>_<time>/` holds the following files:
 
 ## Results
 
+**Final result:** private leaderboard accuracy **0.879**, rank **17 of 81**.
+
 **Final model:** 3 stages, widths 64/128/256, blocks 3/3/3, **4,327,754 trainable parameters**. Trained with SGD (Nesterov), cosine learning rate, TrivialAugmentWide, CutMix on half of the batches and 300 epochs on all 50,000 images. Configuration: [configs/final.json](configs/final.json).
 
-| Model | Parameters | Training images | TTA | Validation accuracy | Public score |
-|---|---|---|---|---|---|
-| Baseline, 4 stages | 2,797,610 | 45,000 | Flip | 94.18% | 0.837 |
-| TrivialAugmentWide, 200 epochs | 2,797,610 | 45,000 | Flip | 95.58% | 0.864 |
-| 3 stages, 200 epochs | 4,327,754 | 45,000 | Flip | 96.52% | 0.872 |
-| 3 stages, 300 epochs | 4,327,754 | 45,000 | Flip | 97.00% | 0.873 |
-| 3 stages, CutMix | 4,327,754 | 45,000 | Flip | 97.00% | 0.873 |
-| **3 stages, 300 epochs, CutMix (final)** | **4,327,754** | **50,000** | **Flip + shift 1** | **None held out** | **0.898** |
-| Same, seed 2027 | 4,327,754 | 50,000 | Flip + shift 1 | None held out | 0.896 |
-| Distillation, 300 epochs | 4,327,754 | 50,000 | None | None held out | 0.875 |
+| # | Model | Training images | TTA | Validation accuracy | Public | Private |
+|---|---|---|---|---|---|---|
+| 1 | Baseline, 4 stages, 2,797,610 parameters | 45,000 | Flip | 94.18% | 0.837 | 0.805 |
+| 2 | TrivialAugmentWide, 200 epochs | 45,000 | Flip | 95.58% | 0.864 | 0.836 |
+| 3 | 3 stages, 200 epochs | 45,000 | Flip | 96.52% | 0.872 | 0.845 |
+| 4 | 3 stages, 300 epochs | 45,000 | Flip | 97.00% | 0.873 | 0.841 |
+| 5 | 3 stages, CutMix, 200 epochs | 45,000 | Flip | 97.00% | 0.873 | 0.871 |
+| 6 | 3 stages, CutMix, 300 epochs, seed 2026 (selected) | 50,000 | Flip + shift 1 | None held out | 0.898 | 0.871 |
+| **7** | **Same, seed 2027 (selected, final)** | **50,000** | **Flip + shift 1** | **None held out** | **0.896** | **0.879** |
+| 8 | Distillation, 300 epochs, no CutMix | 50,000 | None | None held out | 0.875 | 0.852 |
 
-The validation accuracies are without TTA. The setting with distillation reached 97.48% with 45,000 training images. Full history: [experiments.md](experiments.md). Per-run records: [results/](results/).
+Models 3 to 8 have 4,327,754 parameters. Validation accuracies are without TTA. Full history: [experiments.md](experiments.md). Per-run records: [results/](results/).
 
 ## References
 
